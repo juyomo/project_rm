@@ -1,0 +1,59 @@
+
+<!-- lobbyservice at 2000-->
+<html>
+<head>
+</head>
+<body>
+    <h1>Room</h1>
+    <pre id="roomStatus"></pre>
+    <button id="startGame">Start Game</button>
+    <button id="leaveGame">Leave Game - TODO</button>
+    <script>
+        const roomId = new URLSearchParams(window.location.search).get('roomId');
+        const PORT = 2000;
+        const ws = new WebSocket(`ws://localhost:${PORT}/games?roomId=${roomId}`);
+    
+        ws.onopen = () => {
+            console.log("connected to lobbyservice ws");
+        };
+        ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+
+            if (message.type === 'roomInfo') {
+                document.getElementById('roomStatus').textContent = JSON.stringify(message, null, 2);
+            } else if (message.type === 'gameStartSignal') {
+                // Redirect to game page
+                window.location.href = `game.html?roomId=${roomId}`;
+            }
+        };
+        document.getElementById('startGame').onclick = () => {
+            ws.send(JSON.stringify({ action: 'startGame', roomId }));
+        };
+
+        // Polling method (not used with WebSocket but kept for reference)
+        //const pollingUrl = `http://localhost:2000/games/${roomId}/status`;
+        /*function getAndDisplayRoomStatus() {
+            fetch(pollingUrl)
+                .then(response => {
+                    // Check if the response was successful
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json(); // Parse the JSON data
+                })
+                .then(data => {
+                    console.log(data);
+                    document.getElementById('roomStatus').textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    // Handle any errors that occurred during the fetch
+                    console.error('Fetch error:', error);
+                });
+        }
+        setInterval(getAndDisplayRoomStatus, 5000);
+        getAndDisplayRoomStatus();*/
+    </script>
+</body>
+</html>
+
+
