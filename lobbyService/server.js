@@ -20,7 +20,7 @@ app.use(bodyParser.json());
 
 const PORT = 2000;
 server.listen(PORT, () => {
-    console.log(`Lobby service running at port ${PORT}`);
+    console.log(`[LobbyService] Lobby service running at port ${PORT}`);
 });
 
 // -----------------------
@@ -37,16 +37,20 @@ function checkAccessToken(token) {
 
 async function startGame(roomId) {
     // send message to gameService
-    console.log(`Trying to starting game for room ${roomId}`);
+    console.log(`[LobbyService] Trying to starting game for room ${roomId}`);
     const dataToSend = {
         roomId: roomId,
+        players: lobby.findRoom(roomId).players,
     }
+
     try {
-        const response = axios.post(`http://localhost:3000/games/${roomId}/start`, dataToSend);
+        const response = await axios.post(`http://localhost:3000/games/${roomId}/setup`, dataToSend);
+        console.log("[LobbyService] Response from GameService");
         console.log(response.data);
+        lobby.deleteRoom(roomId); // remove room from lobby
         return true;
     } catch (error) {
-        console.error("Error starting game:", error);
+        console.error("Error starting game:");
         return false;
     }
     /*
@@ -67,7 +71,7 @@ app.post('/games', (req, res) => {
     const accessToken = receivedData.accessToken;
 
     if (!checkAccessToken(accessToken)) {
-        console.log("Unauthorized access - not allowed to create room");
+        console.log("[LobbyService] Unauthorized access - not allowed to create room");
         res.status(401).send();
     } else {
         let uuid = generateUUID();
@@ -77,7 +81,7 @@ app.post('/games', (req, res) => {
         newRoom.addPlayer(accessToken);
         lobby.rooms.push(newRoom);
         
-        console.log(`Generated new Game with UUID: ${uuid}`);
+        console.log(`[LobbyService] Generated new Game with UUID: ${uuid}`);
         res.status(201).send({gameId: uuid});
     }
 
@@ -91,20 +95,20 @@ app.post('/games/:gameId/join', (req, res) => {
     const room = lobby.findRoom(gameId);
 
     if (!checkAccessToken(accessToken)) {
-        let errorMessage = "Unauthorized access - cannot join room";
+        let errorMessage = "[LobbyService] Unauthorized access - cannot join room";
         console.log(errorMessage);
         res.status(401).send(errorMessage);
     } else if (!room) {
-        let errorMessage = `Cannot find room with ID ${gameId}`;
+        let errorMessage = `[LobbyService] Cannot find room with ID ${gameId}`;
         console.log(errorMessage);
         res.status(404).send(errorMessage);
     } else if (room.checkRoomFull()) {
-        let errorMessage = "Room is full";
+        let errorMessage = "[LobbyService] Room is full";
         console.log(errorMessage);
         res.status(409).send(errorMessage);
     } else {
         room.addPlayer(accessToken);
-        console.log(`Player ${accessToken} joined room ${gameId}`);
+        console.log(`[LobbyService] Player ${accessToken} joined room ${gameId}`);
         let roomInfo = {
             roomToken: room.gameId,
             gameId: room.gameId,
@@ -145,7 +149,7 @@ app.get('/games/:gameId/status', (req, res) => {
 // Websocket stuff
 wss.on("connection", (ws, req) => {
     ws.id = generateUUID();
-    console.log(`Client Connected to websocket, assigned id ${ws.id}`);
+    console.log(`[LobbyService] Client Connected to websocket, assigned id ${ws.id}`);
 
     const queryParams = url.parse(req.url, true).query;
     const roomId = queryParams.roomId;
@@ -174,13 +178,13 @@ wss.on("connection", (ws, req) => {
             // Parse the incoming data
             const message = JSON.parse(data);
     
-            console.log(`Client ${ws.id} sent message:`, message);
+            console.log(`[LobbyService] Client ${ws.id} sent message:`, message);
     
             // check auth - is it owner?
             if (message.action && message.action === "startGame") {
                 if (startGame(room.gameId)) {
                     // notify all players in the room that game is starting
-                    console.log("Game is starting with id " + room.gameId);
+                    console.log("[LobbyService] Game is starting with id " + room.gameId);
                     // only for same room
                     wss.clients.forEach(client => {
                         if (client.readyState === WebSocket.OPEN) {
@@ -193,14 +197,14 @@ wss.on("connection", (ws, req) => {
                 }
             }
         } catch (err) {
-            console.error("Failed to parse message:", data, err);
+            console.error("[LobbyService] Failed to parse message:", data, err);
         }
         // handle messages from client
         // e.g., join room, leave room, send chat, etc.
     });
     
     ws.on("close", () => {
-        console.log(`client ${ws.id} disconnected from websocket`)
+        console.log(`[LobbyService] client ${ws.id} disconnected from websocket`)
         // remove player from game
         // handle reconnect
     });

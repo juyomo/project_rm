@@ -23,8 +23,13 @@ function findRoom(gameId) {
     return rooms.find(room => room.gameId === gameId);
 }
 
+function deleteRoom(gameId) {
+    rooms = rooms.filter(room => room.gameId !== gameId);
+}
+
 module.exports = {
     Room,
     rooms,
     findRoom,
+    deleteRoom,
 };

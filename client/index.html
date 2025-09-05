@@ -34,7 +34,7 @@
             .then(response => response.json())
             .then(data => {
                 console.log('Success:', data);
-                let newUrl = window.location.href.replace('index.html', 'room.html?roomId=' + data.gameId); // very hacky
+                let newUrl = window.location.href.replace('index.html', `room.html?roomId=${data.gameId}&token=${accessTokenInput.value}`); // very hacky
                 window.location.href = newUrl
             })
             .catch((error) => {
@@ -56,7 +56,7 @@
             .then(response => response.json())
             .then(data => {
                 console.log('Success:', data);
-                let newUrl = window.location.href.replace('index.html', 'room.html?roomId=' + data.gameId); // very hacky
+                let newUrl = window.location.href.replace('index.html', `room.html?roomId=${data.gameId}&token=${accessToken}`); // very hacky
                 window.location.href = newUrl
             })
             .catch((error) => {

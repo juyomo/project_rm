@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>RM GAME ROOM</title>
+</head>
+
+<body>
+  <h1>RM GAME</h1>
+
+  <input type="text" id="player" value="player1">
+
+  <h3>Choose Move</h3>
+  <form>
+    <input type="radio" id="option1" name="option" value="choose_char">
+    <label for="option1">Choose Character Card</label><br>
+  
+    <input type="radio" id="option2" name="option" value="roll_dice">
+    <label for="option2">Roll Dice</label><br>
+  
+    <input type="radio" id="option3" name="option" value="use_skill">
+    <label for="option3">Use Character Skill</label><br>
+  
+    <input type="radio" id="option4" name="option" value="buy_land">
+    <label for="option4">Buy Land</label><br><br>
+  
+    <button type="button" id="sendButton">Send Message</button>
+  </form>
+  <button id="sendButton" onclick="sendMove()">Send Move</button>
+
+  <h3>Status</h3>
+  <pre id="status"></pre>
+
+  <script>
+    const PORT = 3000;
+    const params = new URLSearchParams(window.location.search);
+    const roomId = params.get("roomId");
+    const token = params.get("token");
+    const ws = new WebSocket("ws://localhost:" + PORT + `/?roomId=${roomId}&token=${token}`);
+
+    const playerElem = document.getElementById("player");
+    const statusElem = document.getElementById("status");
+    const sendButton = document.getElementById("sendButton");
+    
+    // Display curr gold
+    // --------------------
+    ws.onopen = () => {
+      let msg = "connected to ws server";
+      console.log(msg);
+      statusElem.textContent += JSON.stringify(msg, null, 2) + "\n\n";
+      ws.send(`${playerElem.value} joined`);
+    };
+    ws.onmessage = (event) => {
+      console.log("Msg from server: " + event.data);
+      statusElem.textContent += JSON.stringify(event.data, null, 2) + "\n\n";
+    };
+    ws.onclose = () => {
+      let msg = "disconnected from ws server";
+      console.log(msg);
+      statusElem.textContent += JSON.stringify(msg, null, 2) + "\n\n";
+    };
+    ws.onerror = (err) => {
+      console.log("Error: " + err);
+      statusElem.textContent += "Error: " + err + "\n\n";
+    };
+
+    // --------------------
+    function sendMove() {
+      const selectedOption = document.querySelector('input[name="option"]:checked');
+      if (selectedOption) {
+        const move = selectedOption.value;
+        const player = playerElem.value;
+        const message = JSON.stringify({
+          type: "move",
+          player: player,
+          move: move
+        });
+        console.log(`${player} chose move: ${move}, sending msg to server...`);
+        ws.send(message);
+        statusElem.textContent += "Sent to server: " + message + "\n\n";
+      } else {
+        alert("Please select a move before sending.");
+      }
+    }
+
+    // --------------------
+    sendButton.onclick = sendMove;
+  </script>
+</body>
+
+</html>
